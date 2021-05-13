@@ -1,0 +1,59 @@
+image: 
+  name: hashicorp/terraform:0.12.26
+  entrypoint:
+    - '/usr/bin/env'
+    - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+variables:
+  PLAN: planfile
+
+cache:
+  paths:
+    - .terraform
+
+before_script:
+  - rm -rf .terraform
+  - sed -i s,#access_key#,$AWS_ACCESS_KEY_ID,g main.tf
+  - sed -i s,#secret_key#,$AWS_SECRET_ACCESS_KEY,g main.tf
+  - terraform -version
+  - terraform init
+
+stages:
+  - prepare
+  - validate
+  - plan
+  # - apply
+  # - destroy
+
+validate:
+  stage: validate
+  script:
+    - terraform validate
+    # - terraform fmt -check=true
+
+plan:
+  stage: plan
+  script:
+    - terraform plan -out=$PLAN
+  dependencies:
+    - validate
+  artifacts:
+    paths:
+      - $PLAN
+
+# apply:
+#   stage: apply
+#   script:
+#     - terraform apply -input=false $PLAN
+#   dependencies:
+#     - plan
+#   only:
+#     - tags
+
+# destroy:
+#   stage: destroy
+#   script:
+#     - terraform destroy -auto-approve
+#   when: manual
+#   only:
+#     - tags
